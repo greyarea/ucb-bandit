@@ -12,11 +12,12 @@ http://www.research.rutgers.edu/~lihong/pub/Li10Contextual.pdf
 
 import math
 import random
+import time
 import numpy as np
 from scipy import linalg
 
 
-T = 1000
+T = 10000
 RHO = 0.1
 
 def alpha(rho):
@@ -44,7 +45,10 @@ def update_a(a, context):
     return a + np.dot(context, context.T)
 
 def update_b(b, context, reward):
-    return b + reward * context
+    if reward != 0:
+        return b + reward * context
+    else:
+        return b
 
 def init(D, ARMS):
     init_a = np.diag(np.ones(D),0)
@@ -72,24 +76,27 @@ def observe_and_update(context, reward, arms, best_arm):
     arms[best_arm]['b'] = update_b(b, context, reward)
     arms[best_arm]['a_inv'] = linalg.inv(arms[best_arm]['a'])
     arms[best_arm]['total_reward'] += reward
-    arms[best_arm]['contexts'].append(context)               
-
+    arms[best_arm]['contexts'].append(context)          
+    
+def total_reward(arms):
+    return sum(map(lambda d: d['total_reward'], arms))
+        
 def mapper(val):
     if val < 0.5:
         return 0.0
     else:
         return 1.0
 
-def test_rewards():
-    rewards = np.random.random((T,1))
+def test_rewards(t):
+    rewards = np.random.random((t,1))
     return np.array([map(mapper, rewards)]).T    
 
 def iter_test(design, rewards):
-    (_,d) = design.shape    
+    (t,d) = design.shape    
     a = np.diag(np.ones(d),0)
     b = np.zeros((d,1))    
     
-    for i in range(T):
+    for i in range(t):
         context = np.array([design[i,:]]).T        
         a = update_a(a, context)
         b = update_b(b, context, rewards[i])
@@ -101,8 +108,9 @@ def iter_test(design, rewards):
 
 def test():
     D = 5
-    rewards = test_rewards()                                                    
-    design = np.random.random((T,D))
+    t = 10
+    rewards = test_rewards(t)                                                    
+    design = np.random.random((t,D))
     a = A(design)
     print "A: " + str(a)
     (a_it, _) = iter_test(design, rewards)
@@ -110,28 +118,32 @@ def test():
     
 def test2():
     D = 5
-    rewards = test_rewards()
-    design = np.random.random((T,D))
-    ARMS = ['arm1', 'arm2']
-    arms = init(D, ARMS)
-    for i in range(T):
+    t = 10
+    rewards = test_rewards(t)
+    design = np.random.random((t,D)) - 0.5
+    design = np.append(np.array(np.ones((t,1))), design, axis = 1)
+    ARMS = ['arm1', 'arm2']    
+    (_,d) = design.shape
+    arms = init(d, ARMS)
+    for i in range(t):
         context = np.array([design[i,:]]).T
         best = best_arm(context, arms)
         observe_and_update(context, rewards[i][0], arms, best)
     
 def test3():
-    D = 1
+    D = 2
+    t = 100
     ARMS = ['arm1', 'arm2']
     arms = init(D, ARMS)
     
-    for _ in range(T):
+    for _ in range(t):
         c = random.random()    
         if c < 0.5:
             correct = 0
         elif c > 0.5:
             correct = 1
             
-        context = np.array([[c-0.5]]).T
+        context = np.array([[1.0, c]]).T
         best = best_arm(context, arms)        
         
         if best == correct:
@@ -140,8 +152,7 @@ def test3():
             reward = 0.0
         
         observe_and_update(context, reward, arms, best)
-    
-    print "D: 1"
+        
     print "arm1: "
     print arms[0]['total_reward']
     print len(arms[0]['contexts'])
@@ -156,9 +167,10 @@ def test3():
     print "------------------------------------------------------"
 
 def test4():
-    D=2        
+    D=3       
     ARMS = ['arm1', 'arm2', 'arm3', 'arm4']
     arms = init(D, ARMS)
+    t = time.time()
     
     for _ in range(T):
         c = (random.random(), random.random())    
@@ -171,43 +183,87 @@ def test4():
         elif c[0] > 0.5 and c[1] > 0.5:
             correct = 3
             
-        context = np.array([[c[0]-0.5, c[1]-0.5]]).T
+        context = np.array([[1.0, c[0], c[1]]]).T
         best = best_arm(context, arms)        
         
-        if best == correct:
+        if best == correct:            
             reward = 1.0
         else:
             reward = 0.0
         
         observe_and_update(context, reward, arms, best)
         
-    print "D: 2"
+    t = time.time() - t 
+    print "Time elapsed: " + str(t)
+    print "Time elapsed per context: " + str(t/T)
+    print "Contexts/sec: " + str(T/t)
+    
     print "arm1: "
     print arms[0]['total_reward']
-    print len(arms[0]['contexts'])
-    #print arms[0]['contexts']
+    print len(arms[0]['contexts'])    
     
     print "arm2: "
     print arms[1]['total_reward']
     print len(arms[1]['contexts'])
-    #print arms[1]['contexts']
     
     print "arm3: "
     print arms[2]['total_reward']
     print len(arms[2]['contexts'])
-    #print arms[2]['contexts']
     
     print "arm4: "
     print arms[3]['total_reward']
     print len(arms[3]['contexts'])
-    #print arms[3]['contexts']
     
-    print "total reward: " + str(arms[0]['total_reward'] + arms[1]['total_reward'] + arms[2]['total_reward'] + arms[3]['total_reward'])
+    total_reward
+    print "total reward: " + str(total_reward(arms))
+    print "reward per context: " + str(total_reward(arms)/T)
     print "------------------------------------------------------"
+    
+def test5():
+    D=4       
+    T=100
+    ARMS = ['health', 'exp', 'ammo']
+    arms = init(D, ARMS)
+    
+    for t in range(T):
+        c = random.randint(0,2)
+        if c == 0:
+            level = random.randint(5,10)
+            health = random.randint(1,4)
+            ammo = random.randint(5,10)
+        elif c == 1:
+            level = random.randint(1,4)
+            health = random.randint(5,10)
+            ammo = random.randint(5,10)            
+        elif c == 2:
+            level = random.randint(5,10)
+            health = random.randint(5,10)
+            ammo = random.randint(1,4)                                            
+            
+        context = np.array([[1.0, level, health, ammo]]).T
+        
+        print "Store has " + ",".join(ARMS)
+        print "Your exp is: " + str(level) 
+        print "Your health is: " + str(health) 
+        print "Your ammo is: " + str(ammo) 
+    
+        best = best_arm(context, arms) 
+        stri = "Wanna buy " + str(ARMS[best]) + "? (y/n)"
+        var = raw_input(stri)
+        if var == 'y':
+            reward = 1.0
+        else: 
+            reward = -1.0
+        
+        observe_and_update(context, reward, arms, best)                      
+        
+         
     
 
 if __name__ == '__main__':
-    test()    
-    test2()
-    test3()
+    #test()    
+    #test2()
+    #test3()    
     test4()
+    #test5()
+    
