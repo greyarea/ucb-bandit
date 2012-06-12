@@ -170,7 +170,7 @@ def test4():
     D=2    
     ARMS = ['arm1', 'arm2', 'arm3', 'arm4']
     arms = init(D, ARMS)
-    t = time.time()
+    ti = time.time()
     
     avg = [0.0, 0.0]    
     
@@ -198,10 +198,10 @@ def test4():
         
         observe_and_update(context, reward, arms, best)
         
-    t = time.time() - t 
-    print "Time elapsed: " + str(t)
-    print "Time elapsed per context: " + str(t/T)
-    print "Contexts/sec: " + str(T/t)
+    ti = time.time() - ti 
+    print "Time elapsed: " + str(ti)
+    print "Time elapsed per context: " + str(ti/T)
+    print "Contexts/sec: " + str(T/ti)
     
     print "arm1: "
     print arms[0]['total_reward']
