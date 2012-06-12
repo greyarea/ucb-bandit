@@ -150,6 +150,17 @@ def total_reward(arms):
      - ``arms``: List of arm dicts    
      '''
     return sum(map(lambda d: d['total_reward'], arms))
+
+def update_running_average(avg, context, t):
+    '''
+    Return updated running average.
+    
+    Arguments: 
+    - ``avg``: Numpy array vector
+    - ``context``: Input context as numpy array vector
+    - ``t``: Time step t as integer
+    '''     
+    return (t*avg + context)/(t+1)
         
 def mapper(val):
     if val < 0.5:
@@ -217,10 +228,10 @@ def test4():
     arms = init(D, ARMS)
     ti = time.time()
     
-    avg = [0.0, 0.0]    
+    avg = np.zeros(D)        
     
     for t in range(T):
-        c = (random.random(), random.random())    
+        c = np.random.random(2)    
         if c[0] < 0.5 and c[1] < 0.5: 
             correct = 0
         elif c[0] < 0.5 and c[1] > 0.5:
@@ -229,9 +240,8 @@ def test4():
             correct = 2
         elif c[0] > 0.5 and c[1] > 0.5:
             correct = 3
-            
-        avg[0] = (t*avg[0] + c[0])/(t+1)
-        avg[1] = (t*avg[1] + c[1])/(t+1)
+                            
+        avg = update_running_average(avg, c, t)        
             
         context = np.array([[c[0] - avg[0], c[1] - avg[1]]]).T
         best = best_arm(context, arms)        
@@ -288,8 +298,7 @@ def test5():
             ammo = random.randint(1,4)                                            
         
         c = np.array([level, health, ammo])
-        for d in range(D):            
-            avg[d] = (t*avg[d] + c[d])/(t+1)            
+        avg = update_running_average(avg, c, t)            
         
         context = np.array([[level, health, ammo]]).T
         
