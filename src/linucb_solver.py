@@ -167,12 +167,14 @@ def test3():
     print "------------------------------------------------------"
 
 def test4():
-    D=3       
+    D=2    
     ARMS = ['arm1', 'arm2', 'arm3', 'arm4']
     arms = init(D, ARMS)
     t = time.time()
     
-    for _ in range(T):
+    avg = [0.0, 0.0]    
+    
+    for t in range(T):
         c = (random.random(), random.random())    
         if c[0] < 0.5 and c[1] < 0.5: 
             correct = 0
@@ -183,7 +185,10 @@ def test4():
         elif c[0] > 0.5 and c[1] > 0.5:
             correct = 3
             
-        context = np.array([[1.0, c[0], c[1]]]).T
+        avg[0] = (t*avg[0] + c[0])/(t+1)
+        avg[1] = (t*avg[1] + c[1])/(t+1)
+            
+        context = np.array([[ c[0] - avg[0], c[1] - avg[1]]]).T
         best = best_arm(context, arms)        
         
         if best == correct:            
@@ -220,11 +225,12 @@ def test4():
     print "------------------------------------------------------"
     
 def test5():
-    D=4       
+    D=3      
     T=100
     ARMS = ['health', 'exp', 'ammo']
     arms = init(D, ARMS)
-    
+    avg = np.zeros(D)  
+     
     for t in range(T):
         c = random.randint(0,2)
         if c == 0:
@@ -239,8 +245,12 @@ def test5():
             level = random.randint(5,10)
             health = random.randint(5,10)
             ammo = random.randint(1,4)                                            
-            
-        context = np.array([[1.0, level, health, ammo]]).T
+        
+        c = np.array([level, health, ammo])
+        for d in range(D):            
+            avg[d] = (t*avg[d] + c[d])/(t+1)            
+        
+        context = np.array([[level, health, ammo]]).T
         
         print "Store has " + ",".join(ARMS)
         print "Your exp is: " + str(level) 
